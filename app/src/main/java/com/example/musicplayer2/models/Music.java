@@ -7,17 +7,21 @@ public class Music {
     private String artist;
     private String fileUrl; // Firebase Storage URL
     private String uploaderId; // The user who uploaded the music
+    private String imageUrl;
+    private String genre; // New attribute
 
     public Music() {
         // Empty constructor for Firebase
     }
 
-    public Music(String musicId, String title, String artist, String fileUrl, String uploaderId) {
+    public Music(String musicId, String title, String artist, String fileUrl, String uploaderId, String imageUrl, String genre) {
         this.musicId = musicId;
         this.title = title;
         this.artist = artist;
         this.fileUrl = fileUrl;
         this.uploaderId = uploaderId;
+        this.imageUrl = imageUrl;
+        this.genre = genre;
     }
 
     // Getters and Setters
@@ -60,6 +64,20 @@ public class Music {
     public void setUploaderId(String uploaderId) {
         this.uploaderId = uploaderId;
     }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getGenre() {
+        return genre;
+    }
+
+    public void setGenre(String genre) {
+        this.genre = genre;
+    }
 }
-
-

@@ -10,15 +10,18 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class FirebaseUtils {
@@ -37,10 +40,11 @@ public class FirebaseUtils {
      *
      * @param fileUri            the URI of the music file
      * @param title              the title of the music
-     * @param artist             the artist of the music
+     * @param genre              the genre of the music
+     * @param imageUrl           the URL of the uploaded music image file
      * @param onCompleteListener listener for when the upload is complete
      */
-    public static void uploadMusic(Uri fileUri, String title, String artist, OnCompleteListener<Uri> onCompleteListener) {
+    public static void uploadMusic(Uri fileUri, String title, String genre, String imageUrl, OnCompleteListener<Uri> onCompleteListener) {
         String userId = auth.getCurrentUser().getUid();
         String musicId = db.collection(MUSIC_COLLECTION).document().getId();
         StorageReference storageReference = storage.getReference().child("music/" + musicId);
@@ -62,24 +66,58 @@ public class FirebaseUtils {
     }
 
     /**
+     * Uploads music image to Firebase Storage and retrieves the download URL.
+     *
+     * @param imageUri           the URI of the music image file
+     * @param onCompleteListener listener for when the upload is complete
+     */
+    public static void uploadMusicImage(Uri imageUri, OnCompleteListener<String> onCompleteListener) {
+        String imageId = db.collection(MUSIC_COLLECTION).document().getId();
+        StorageReference imageRef = storage.getReference().child("music_images/" + imageId);
+
+        imageRef.putFile(imageUri)
+            .continueWithTask(task -> {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
+                }
+                return imageRef.getDownloadUrl();
+            })
+            .addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    String imageUrl = task.getResult().toString();
+                    onCompleteListener.onComplete(Tasks.forResult(imageUrl));
+                } else {
+                    onCompleteListener.onComplete(Tasks.forResult(""));
+                }
+            });
+    }
+
+    /**
      * Saves music metadata to Firestore.
      *
      * @param title              the title of the music
-     * @param artist             the artist of the music
+     * @param genre              the genre of the music
      * @param fileUrl            the URL of the uploaded music file
+     * @param imageUrl           the URL of the uploaded music image file
      * @param onCompleteListener listener for when the save operation is complete
      */
-    public static void saveMusicData(String title, String artist, String fileUrl, OnCompleteListener<Void> onCompleteListener) {
+    public static void saveMusicData(String title, String genre, String fileUrl, String imageUrl, OnCompleteListener<Void> onCompleteListener) {
         String userId = auth.getCurrentUser().getUid();
         String musicId = db.collection(MUSIC_COLLECTION).document().getId();
 
-        // Create a Music object and save it in Firestore
-        Music music = new Music(musicId, title, artist, fileUrl, userId);
-        Log.d(TAG, "Saving music metadata: " + title + " by " + artist);
-
-        db.collection(MUSIC_COLLECTION).document(musicId).set(music)
-                .addOnCompleteListener(onCompleteListener)
-                .addOnFailureListener(e -> Log.e(TAG, "Error saving music data: ", e));
+        // Get user's name from Firestore
+        db.collection(USER_COLLECTION).document(userId).get()
+            .addOnSuccessListener(documentSnapshot -> {
+                String artistName = documentSnapshot.getString("name");
+                Music music = new Music(musicId, title, artistName, fileUrl, userId, imageUrl, genre);
+                
+                db.collection(MUSIC_COLLECTION).document(musicId).set(music)
+                    .addOnCompleteListener(onCompleteListener);
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error getting user name: ", e);
+                onCompleteListener.onComplete(Tasks.forException(e));
+            });
     }
 
     /**
@@ -141,14 +179,99 @@ public class FirebaseUtils {
         String userId = auth.getCurrentUser().getUid();
         String playlistId = db.collection(PLAYLIST_COLLECTION).document().getId();
 
-        // Create a playlist entry
+        // Create a playlist entry - Match field names with Playlist.java
         Map<String, Object> playlistData = new HashMap<>();
-        playlistData.put("playlistId", playlistId);
+        playlistData.put("playlistId", playlistId);  // Make sure this matches the field name
         playlistData.put("name", playlistName);
-        playlistData.put("ownerId", userId);
+        playlistData.put("userId", userId);  // Match field name
+        playlistData.put("musicIds", new ArrayList<>());  // Match field name
+        playlistData.put("imageUrl", "");  // Match field name
+        playlistData.put("createdAt", System.currentTimeMillis());
 
         db.collection(PLAYLIST_COLLECTION).document(playlistId).set(playlistData)
                 .addOnCompleteListener(onCompleteListener)
                 .addOnFailureListener(e -> Log.e(TAG, "Error creating playlist: ", e));
+    }
+    
+    public static void createPlaylist(String name, OnCompleteListener<Void> listener) {
+        String userId = auth.getCurrentUser().getUid();
+        String playlistId = db.collection(PLAYLIST_COLLECTION).document().getId();
+
+        Map<String, Object> playlist = new HashMap<>();
+        playlist.put("playlistId", playlistId);  // Changed from "id" to "playlistId"
+        playlist.put("name", name);
+        playlist.put("userId", userId);
+        playlist.put("musicIds", new ArrayList<>());  // Changed from "songs" to "musicIds"
+        playlist.put("imageUrl", "");
+        playlist.put("createdAt", System.currentTimeMillis());
+
+        db.collection(PLAYLIST_COLLECTION).document(playlistId)
+            .set(playlist)
+            .addOnCompleteListener(listener);
+    }
+
+    public static void searchSongs(String query, OnCompleteListener<List<Music>> listener) {
+        db.collection(MUSIC_COLLECTION)
+            .get()
+            .addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    List<Music> results = new ArrayList<>();
+                    for (DocumentSnapshot doc : task.getResult()) {
+                        Music music = doc.toObject(Music.class);
+                        if (music != null && music.getTitle() != null && 
+                            music.getTitle().toLowerCase().contains(query.toLowerCase())) {
+                            results.add(music);
+                        }
+                    }
+                    listener.onComplete(Tasks.forResult(results));
+                } else {
+                    listener.onComplete(Tasks.forException(task.getException()));
+                }
+            });
+    }
+
+    public static void addSongToPlaylist(String playlistId, String musicId, OnCompleteListener<Void> listener) {
+        db.collection(PLAYLIST_COLLECTION).document(playlistId)
+            .update("musicIds", FieldValue.arrayUnion(musicId))
+            .addOnCompleteListener(listener);
+    }
+
+    public static void removeSongFromPlaylist(String playlistId, String musicId, OnCompleteListener<Void> listener) {
+        // Change from "songs" to "musicIds"
+        db.collection(PLAYLIST_COLLECTION).document(playlistId)
+            .update("musicIds", FieldValue.arrayRemove(musicId))
+            .addOnCompleteListener(listener);
+    }
+
+    public static void getPlaylistSongs(String playlistId, OnCompleteListener<List<Music>> listener) {
+        db.collection(PLAYLIST_COLLECTION).document(playlistId)
+            .get()
+            .addOnSuccessListener(documentSnapshot -> {
+                // Change from "songs" to "musicIds" to match the field name
+                List<String> musicIds = (List<String>) documentSnapshot.get("musicIds");
+                if (musicIds == null || musicIds.isEmpty()) {
+                    listener.onComplete(Tasks.forResult(new ArrayList<>()));
+                    return;
+                }
+
+                db.collection(MUSIC_COLLECTION)
+                    .whereIn("musicId", musicIds)
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            List<Music> songs = new ArrayList<>();
+                            for (DocumentSnapshot doc : task.getResult()) {
+                                Music music = doc.toObject(Music.class);
+                                if (music != null) {
+                                    songs.add(music);
+                                }
+                            }
+                            listener.onComplete(Tasks.forResult(songs));
+                        } else {
+                            listener.onComplete(Tasks.forException(task.getException()));
+                        }
+                    });
+            })
+            .addOnFailureListener(e -> listener.onComplete(Tasks.forException(e)));
     }
 }

@@ -11,14 +11,17 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-
+            android:src="@drawable/ic_back"
+            android:contentDescription="Back button"
             android:tint="@color/white"/>
 
     </androidx.appcompat.widget.Toolbar>
@@ -31,6 +34,7 @@
         android:layout_margin="32dp"
         android:background="@drawable/album_art_background"
         android:scaleType="centerCrop"
+        android:contentDescription="Album art"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintStart_toStartOf="parent"
@@ -69,13 +73,15 @@
     <!-- Progress Bar -->
     <SeekBar
         android:id="@+id/seekBar"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="24dp"
         android:layout_marginBottom="32dp"
         android:progressTint="@color/spotify_green"
         android:thumbTint="@color/spotify_green"
-        app:layout_constraintBottom_toTopOf="@id/controlsLayout"/>
+        app:layout_constraintBottom_toTopOf="@id/controlsLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <TextView
         android:id="@+id/currentTimeTextView"
@@ -115,6 +121,7 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_shuffle"
+            android:contentDescription="Shuffle"
             android:tint="@color/light_gray"/>
 
         <ImageButton
@@ -124,6 +131,7 @@
             android:layout_marginStart="24dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_previous"
+            android:contentDescription="Previous"
             android:tint="@color/white"/>
 
         <ImageButton
@@ -133,6 +141,7 @@
             android:layout_marginHorizontal="24dp"
             android:background="@drawable/play_button_background"
             android:src="@drawable/ic_pause"
+            android:contentDescription="Play/Pause"
             android:tint="@color/white"/>
 
         <ImageButton
@@ -142,6 +151,7 @@
             android:layout_marginEnd="24dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_next"
+            android:contentDescription="Next"
             android:tint="@color/white"/>
 
         <ImageButton
@@ -150,6 +160,7 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_repeat"
+            android:contentDescription="Repeat"
             android:tint="@color/light_gray"/>
 
     </LinearLayout>

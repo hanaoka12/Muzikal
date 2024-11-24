@@ -6,10 +6,14 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.example.musicplayer2.R;
 import com.example.musicplayer2.models.Music;
 
@@ -32,11 +36,15 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
     public static class MusicViewHolder extends RecyclerView.ViewHolder {
         public TextView titleTextView;
         public TextView artistTextView;
+        public ImageView musicImageView;
+        public ImageButton moreButton;
 
         public MusicViewHolder(View itemView, final OnMusicClickListener listener) {
             super(itemView);
             titleTextView = itemView.findViewById(R.id.music_title);
             artistTextView = itemView.findViewById(R.id.music_artist);
+            musicImageView = itemView.findViewById(R.id.musicImageView);
+            moreButton = itemView.findViewById(R.id.moreButton);
 
             // Handle music item click
             itemView.setOnClickListener(v -> {
@@ -62,6 +70,17 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
         Music music = musicList.get(position);
         holder.titleTextView.setText(music.getTitle());
         holder.artistTextView.setText(music.getArtist());
+
+        // Load image using Glide
+        if (music.getImageUrl() != null && !music.getImageUrl().isEmpty()) {
+            Glide.with(context)
+                .load(music.getImageUrl())
+                .placeholder(R.drawable.album_art_background)
+                .transform(new RoundedCorners(8))
+                .into(holder.musicImageView);
+        } else {
+            holder.musicImageView.setImageResource(R.drawable.album_art_background);
+        }
     }
 
     @Override
@@ -74,4 +93,3 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
         void onMusicClick(int position);
     }
 }
-

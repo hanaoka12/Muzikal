@@ -96,11 +96,16 @@ public class LibraryActivity extends AppCompatActivity implements MusicAdapter.O
     @Override
     public void onMusicClick(int position) {
         if (position >= 0 && position < musicList.size()) {
-            // Open PlayerActivity to play the selected music
+            Music selectedMusic = musicList.get(position);  // Get the selected music object
+            
+            Log.d(TAG, "Image URL being passed: " + selectedMusic.getImageUrl());
+            
             Intent intent = new Intent(this, PlayerActivity.class);
-            intent.putExtra("MUSIC_URL", musicList.get(position).getFileUrl());
-            intent.putExtra("MUSIC_TITLE", musicList.get(position).getTitle());
-            intent.putExtra("MUSIC_ARTIST", musicList.get(position).getArtist());
+            intent.putExtra("MUSIC_URL", selectedMusic.getFileUrl());
+            intent.putExtra("MUSIC_TITLE", selectedMusic.getTitle());
+            intent.putExtra("MUSIC_ARTIST", selectedMusic.getArtist());
+            intent.putExtra("MUSIC_IMAGE", selectedMusic.getImageUrl());  // Add image URL
+            
             startActivity(intent);
         } else {
             Toast.makeText(this, "Invalid music selection", Toast.LENGTH_SHORT).show();

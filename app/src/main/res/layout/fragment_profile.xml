@@ -51,14 +51,15 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"/>
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/editProfileButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Edit Profile"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginBottom="24dp"
-                style="@style/SpotifyButton"/>
+                android:backgroundTint="@color/spotify_green"
+                />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -75,13 +76,32 @@
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"/>
 
-            <Button
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Your Playlists"
+                android:textSize="20sp"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/viewPlaylistsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="View All Playlists"
+                android:layout_marginBottom="24dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="@color/white"
+                app:strokeColor="@color/spotify_green"/>
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/logoutButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Logout"
                 android:layout_marginTop="16dp"
-                style="@style/SpotifyButton"/>
+                android:backgroundTint="@color/spotify_green" />
 
         </LinearLayout>
 

@@ -2,23 +2,29 @@ package com.example.musicplayer2.Fragments;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
+
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.musicplayer2.Activity.EditProfileActivity;
 import com.example.musicplayer2.Activity.LoginActivity;
+import com.example.musicplayer2.Activity.MainActivity;
 import com.example.musicplayer2.Activity.PlayerActivity;
+import com.example.musicplayer2.Activity.PlaylistActivity;
 import com.example.musicplayer2.R;
 import com.example.musicplayer2.adapters.MusicAdapter;
 import com.example.musicplayer2.models.Music;
 import com.example.musicplayer2.models.User;
+import com.example.musicplayer2.utils.MediaPlayerManager;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
@@ -28,7 +34,7 @@ import de.hdodenhof.circleimageview.CircleImageView;
 public class ProfileFragment extends Fragment implements MusicAdapter.OnMusicClickListener {
     private TextView userNameText;
     private CircleImageView profileImageView;
-    private Button logoutButton, editProfileButton;
+    private Button logoutButton, editProfileButton, viewPlaylistsButton;
     private RecyclerView userMusicRecyclerView;
     private ProgressBar progressBar;
     private MusicAdapter musicAdapter;
@@ -60,6 +66,7 @@ public class ProfileFragment extends Fragment implements MusicAdapter.OnMusicCli
         profileImageView = view.findViewById(R.id.profileImageView);
         logoutButton = view.findViewById(R.id.logoutButton);
         editProfileButton = view.findViewById(R.id.editProfileButton);
+        viewPlaylistsButton = view.findViewById(R.id.viewPlaylistsButton);
         userMusicRecyclerView = view.findViewById(R.id.userMusicRecyclerView);
         progressBar = view.findViewById(R.id.profileProgressBar);
 
@@ -83,6 +90,10 @@ public class ProfileFragment extends Fragment implements MusicAdapter.OnMusicCli
 
         editProfileButton.setOnClickListener(v -> {
             startActivity(new Intent(getContext(), EditProfileActivity.class));
+        });
+
+        viewPlaylistsButton.setOnClickListener(v -> {
+            startActivity(new Intent(getContext(), PlaylistActivity.class));
         });
     }
 
@@ -139,12 +150,34 @@ public class ProfileFragment extends Fragment implements MusicAdapter.OnMusicCli
 
     @Override
     public void onMusicClick(int position) {
-        if (position >= 0 && position < userMusicList.size()) {
-            Intent intent = new Intent(getContext(), PlayerActivity.class);
-            intent.putExtra("MUSIC_URL", userMusicList.get(position).getFileUrl());
-            intent.putExtra("MUSIC_TITLE", userMusicList.get(position).getTitle());
-            intent.putExtra("MUSIC_ARTIST", userMusicList.get(position).getArtist());
-            startActivity(intent);
+        if (position >= 0 && position < userMusicList.size() && getActivity() != null) {
+            try {
+                Music selectedMusic = userMusicList.get(position);
+                MediaPlayerManager playerManager = MediaPlayerManager.getInstance();
+
+                // Set music info first
+                playerManager.setCurrentMusicInfo(
+                        selectedMusic.getFileUrl(),
+                        selectedMusic.getTitle(),
+                        selectedMusic.getArtist(),
+                        selectedMusic.getImageUrl()
+                );
+
+                // Start playing
+                playerManager.playMusicFromUrl(
+                        requireContext(),
+                        selectedMusic.getFileUrl()
+                );
+
+                // Show mini player using MainActivity method
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).showMiniPlayer(selectedMusic);
+                }
+            } catch (Exception e) {
+                Log.e("ProfileFragment", "Error playing music: ", e);
+                Toast.makeText(requireContext(), "Error playing music", Toast.LENGTH_SHORT).show();
+            }
         }
     }
+
 }

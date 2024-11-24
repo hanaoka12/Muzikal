@@ -2,25 +2,37 @@ package com.example.musicplayer2.Activity;
 
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.bumptech.glide.Glide;
 import com.example.musicplayer2.R;
 import com.example.musicplayer2.utils.MediaPlayerManager;
 
+
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
+import android.graphics.drawable.Drawable;
+import androidx.annotation.Nullable;
 public class PlayerActivity extends AppCompatActivity {
 
     private TextView titleTextView, artistTextView, currentTimeTextView, totalTimeTextView;
     private ImageButton btnPlayPause, btnPrevious, btnNext, btnShuffle, btnRepeat, btnBack;
+    private ImageView albumArtImageView;
     private SeekBar seekBar;
-    private String musicUrl, musicTitle, musicArtist;
+    private String musicUrl, musicTitle, musicArtist, imageUrl;
     private MediaPlayerManager mediaPlayerManager;
     private Handler handler;
     private Runnable updateSeekBar;
     private boolean isPlaying = false;
+    private boolean isSeekbarTracking = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +58,7 @@ public class PlayerActivity extends AppCompatActivity {
         btnRepeat = findViewById(R.id.btnRepeat);
         btnBack = findViewById(R.id.btnBack);
         seekBar = findViewById(R.id.seekBar);
+        albumArtImageView = findViewById(R.id.albumArtImageView);
     }
 
     private void setupClickListeners() {
@@ -56,16 +69,20 @@ public class PlayerActivity extends AppCompatActivity {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    mediaPlayerManager.seekTo(progress);
                     updateTimeLabels();
                 }
             }
 
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                isSeekbarTracking = true;
+            }
 
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                isSeekbarTracking = false;
+                mediaPlayerManager.seekTo(seekBar.getProgress());
+            }
         });
     }
 
@@ -73,16 +90,61 @@ public class PlayerActivity extends AppCompatActivity {
         musicUrl = getIntent().getStringExtra("MUSIC_URL");
         musicTitle = getIntent().getStringExtra("MUSIC_TITLE");
         musicArtist = getIntent().getStringExtra("MUSIC_ARTIST");
+        imageUrl = getIntent().getStringExtra("MUSIC_IMAGE");
+
+
 
         titleTextView.setText(musicTitle);
         artistTextView.setText(musicArtist);
+
+        // Load image using Glide with error handling
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            Glide.with(this)
+                .load(imageUrl)
+                .placeholder(R.drawable.album_art_background)
+                .error(R.drawable.album_art_background)
+                .listener(new RequestListener<Drawable>() {
+                    @Override
+                    public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
+                        Log.e("PlayerActivity", "Image load failed: " + e.getMessage());
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
+                        Log.d("PlayerActivity", "Image loaded successfully");
+                        return false;
+                    }
+                })
+                .into(albumArtImageView);
+        } else {
+            Log.d("PlayerActivity", "No image URL provided, using default");
+            albumArtImageView.setImageResource(R.drawable.album_art_background);
+        }
     }
 
     private void setupMediaPlayer() {
-        mediaPlayerManager = new MediaPlayerManager();
-        mediaPlayerManager.playMusicFromUrl(this, musicUrl);
-        isPlaying = true;
-        updatePlayPauseButton();
+        mediaPlayerManager = MediaPlayerManager.getInstance();
+        
+        // Only set the listener, don't start playback
+        mediaPlayerManager.setOnPreparedListener(() -> {
+            isPlaying = mediaPlayerManager.isPlaying();  // Get current state
+            updatePlayPauseButton();
+            int duration = mediaPlayerManager.getDuration();
+            seekBar.setMax(duration);
+            updateTimeLabels();
+        });
+
+        // Don't start playback if already playing
+        if (!mediaPlayerManager.isCurrentSong(musicUrl)) {
+            mediaPlayerManager.playMusicFromUrl(this, musicUrl);
+        } else {
+            // Just update UI for current playback
+            isPlaying = mediaPlayerManager.isPlaying();
+            updatePlayPauseButton();
+            seekBar.setMax(mediaPlayerManager.getDuration());
+            updateTimeLabels();
+        }
     }
 
     private void setupSeekBarUpdate() {
@@ -90,12 +152,17 @@ public class PlayerActivity extends AppCompatActivity {
         updateSeekBar = new Runnable() {
             @Override
             public void run() {
-                if (mediaPlayerManager != null) {
+                if (mediaPlayerManager != null && !isSeekbarTracking) {
                     int currentPosition = mediaPlayerManager.getCurrentPosition();
-                    seekBar.setProgress(currentPosition);
-                    updateTimeLabels();
-                    handler.postDelayed(this, 1000);
+                    int duration = mediaPlayerManager.getDuration();
+                    
+                    if (duration > 0) {
+                        seekBar.setMax(duration);
+                        seekBar.setProgress(currentPosition);
+                        updateTimeLabels();
+                    }
                 }
+                handler.postDelayed(this, 1000);
             }
         };
         handler.post(updateSeekBar);
@@ -116,7 +183,8 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void updateTimeLabels() {
-        int currentPosition = mediaPlayerManager.getCurrentPosition();
+        int currentPosition = isSeekbarTracking ? 
+            seekBar.getProgress() : mediaPlayerManager.getCurrentPosition();
         int duration = mediaPlayerManager.getDuration();
 
         currentTimeTextView.setText(formatTime(currentPosition));
@@ -135,8 +203,9 @@ public class PlayerActivity extends AppCompatActivity {
         if (handler != null) {
             handler.removeCallbacks(updateSeekBar);
         }
-        if (mediaPlayerManager != null) {
-            mediaPlayerManager.releasePlayer();
-        }
+        // Don't release player here since it's managed by service
+        // if (mediaPlayerManager != null) {
+        //     mediaPlayerManager.releasePlayer();
+        // }
     }
 }

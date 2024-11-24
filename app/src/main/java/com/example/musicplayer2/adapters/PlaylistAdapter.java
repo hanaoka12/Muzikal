@@ -1,74 +1,75 @@
 package com.example.musicplayer2.adapters;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
+import com.bumptech.glide.Glide;
 import com.example.musicplayer2.R;
 import com.example.musicplayer2.models.Playlist;
-
 import java.util.List;
 
-public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.PlaylistViewHolder> {
-
+public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.ViewHolder> {
     private Context context;
-    private List<Playlist> playlistList;
-    private OnPlaylistClickListener onPlaylistClickListener;
+    private List<Playlist> playlists;
+    private OnPlaylistClickListener listener;
 
-    // Constructor
-    public PlaylistAdapter(Context context, List<Playlist> playlistList, OnPlaylistClickListener listener) {
-        this.context = context;
-        this.playlistList = playlistList;
-        this.onPlaylistClickListener = listener;
+    public interface OnPlaylistClickListener {
+        void onPlaylistClick(Playlist playlist);
     }
 
-    // ViewHolder class
-    public static class PlaylistViewHolder extends RecyclerView.ViewHolder {
-        public TextView playlistNameTextView;
-
-        public PlaylistViewHolder(View itemView, final OnPlaylistClickListener listener) {
-            super(itemView);
-            playlistNameTextView = itemView.findViewById(R.id.playlist_name); // Ensure this matches your layout
-
-            // Handle playlist item click
-            itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    int position = getAdapterPosition();
-                    if (position != RecyclerView.NO_POSITION) {
-                        listener.onPlaylistClick(position);
-                    }
-                }
-            });
-        }
+    public PlaylistAdapter(Context context, List<Playlist> playlists, OnPlaylistClickListener listener) {
+        this.context = context;
+        this.playlists = playlists;
+        this.listener = listener;
     }
 
     @NonNull
     @Override
-    public PlaylistViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Inflate the layout for each playlist item
-        View view = LayoutInflater.from(context).inflate(R.layout.playlist_item, parent, false);
-        return new PlaylistViewHolder(view, onPlaylistClickListener);
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(context).inflate(R.layout.item_playlist, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull PlaylistViewHolder holder, int position) {
-        // Bind data to the playlist item
-        Playlist playlist = playlistList.get(position);
-        holder.playlistNameTextView.setText(playlist.getName()); // Ensure getName() method exists in Playlist model
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        Playlist playlist = playlists.get(position);
+        holder.playlistNameTextView.setText(playlist.getName());
+        
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                Log.d("PlaylistAdapter", "Playlist clicked: " + playlist.getName() 
+                    + " ID: " + playlist.getPlaylistId());
+                listener.onPlaylistClick(playlist);
+            }
+        });
+
+        if (playlist.getImageUrl() != null && !playlist.getImageUrl().isEmpty()) {
+            Glide.with(context)
+                .load(playlist.getImageUrl())
+                .placeholder(R.drawable.ic_playlist)
+                .into(holder.playlistImageView);
+        }
     }
 
     @Override
     public int getItemCount() {
-        return playlistList.size(); // Return the total number of playlists
+        return playlists.size();
     }
 
-    // Interface for handling playlist item clicks
-    public interface OnPlaylistClickListener {
-        void onPlaylistClick(int position);
+    public class ViewHolder extends RecyclerView.ViewHolder {
+        ImageView playlistImageView;
+        TextView playlistNameTextView;
+
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            playlistImageView = itemView.findViewById(R.id.playlistImageView);
+            playlistNameTextView = itemView.findViewById(R.id.playlistNameTextView);
+        }
     }
 }
